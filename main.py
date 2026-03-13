@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 """
-Download artifacts from a GitHub Actions workflow run.
+GitHub Actions Manager - Download artifacts and manage workflow runs.
 
-By default, all artifact files are flattened into a single output directory.
-The outer artifact.zip wrapper is automatically removed.
+This tool provides subcommands to:
+1. download: Download and extract artifacts from a workflow run.
+2. delete-runs: Delete all workflow runs in a repository.
 
 Usage:
-    python download_artifacts.py <owner>/<repo> <run_id> [output_dir]
-    python download_artifacts.py <url> [output_dir]
+    python main.py download <owner>/<repo> <run_id> [output_dir]
+    python main.py download <url> [output_dir]
+    python main.py delete-runs <owner>/<repo>
+    python main.py delete-runs <url>
 
 Examples:
-    # Flatten all artifacts to single directory (default)
-    python download_artifacts.py wisdom-valley/knowlify-ai 19810307537
+    # Download and flatten artifacts
+    python main.py download wisdom-valley/knowlify-ai 19810307537
 
-    # Custom output directory
-    python download_artifacts.py wisdom-valley/knowlify-ai 19810307537 ./artifacts
-
-    # Keep artifacts in separate subdirectories
-    python download_artifacts.py wisdom-valley/knowlify-ai 19810307537 --no-flatten
-
-    # Using GitHub Actions URL
-    python download_artifacts.py https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537
+    # Delete all runs in a repo
+    python main.py delete-runs wisdom-valley/knowlify-ai
 """
 
 from __future__ import annotations
@@ -553,21 +550,21 @@ def download_artifacts(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="GitHub Actions tools for artifact downloading and run management",
+        description="GitHub Actions Manager - Tools for artifact downloading and run management",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
   # Download artifacts using owner/repo and run_id
-  python main.py download wisdom-valley/knowlify-ai 19810307537
+  github-actions-manager download wisdom-valley/knowlify-ai 19810307537
 
   # Download artifacts using full GitHub Actions URL
-  python main.py download https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537
+  github-actions-manager download https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537
 
   # Delete ALL workflow runs in a repository
-  python main.py delete-runs wisdom-valley/knowlify-ai
+  github-actions-manager delete-runs wisdom-valley/knowlify-ai
 
   # Delete ALL workflow runs using repository Actions URL
-  python main.py delete-runs https://github.com/wisdom-valley/knowlify-ai/actions
+  github-actions-manager delete-runs https://github.com/wisdom-valley/knowlify-ai/actions
         """
     )
 
