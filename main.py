@@ -185,6 +185,100 @@ def parse_run_url(url: str) -> tuple[str, str]:
     )
 
 
+def parse_repo_url(url: str) -> str:
+    """Parse GitHub Actions URL to extract owner/repo."""
+    # Match https://github.com/owner/repo/actions or https://github.com/owner/repo
+    match = re.match(
+        r"https://github\.com/([^/]+)/([^/]+)(/actions)?",
+        url
+    )
+    if match:
+        owner, repo = match.group(1), match.group(2)
+        return f"{owner}/{repo}"
+
+    raise ValueError(
+        f"Invalid GitHub repository URL: {url}\n"
+        "Expected format: https://github.com/owner/repo/actions"
+    )
+
+
+def list_all_workflow_runs(repo: str, token: str) -> list[int]:
+    """List all workflow run IDs in a repository, handling pagination."""
+    run_ids = []
+    page = 1
+    per_page = 100
+
+    while True:
+        api_url = f"https://api.github.com/repos/{repo}/actions/runs?per_page={per_page}&page={page}"
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        log.info(f"Fetching workflow runs (page {page})...")
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        runs = data.get("workflow_runs", [])
+        if not runs:
+            break
+
+        run_ids.extend([run["id"] for run in runs])
+
+        if len(runs) < per_page:
+            break
+        page += 1
+
+    return run_ids
+
+
+def delete_workflow_run(repo: str, run_id: int, token: str) -> None:
+    """Delete a specific workflow run."""
+    api_url = f"https://api.github.com/repos/{repo}/actions/runs/{run_id}"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    response = requests.delete(api_url, headers=headers)
+    response.raise_for_status()
+
+
+def delete_all_workflow_runs(repo: str, token: Optional[str] = None) -> None:
+    """Delete all workflow runs in a repository."""
+    if token is None:
+        token = get_github_token()
+
+    try:
+        run_ids = list_all_workflow_runs(repo, token)
+    except requests.HTTPError as e:
+        log.error(f"Failed to list workflow runs: {e}")
+        sys.exit(1)
+
+    if not run_ids:
+        log.info(f"No workflow runs found in {repo}")
+        return
+
+    log.info(f"Found {len(run_ids)} workflow runs to delete in {repo}")
+    confirm = input(f"Are you sure you want to delete ALL {len(run_ids)} workflow runs? (y/N): ")
+    if confirm.lower() != 'y':
+        log.info("Deletion cancelled by user")
+        return
+
+    deleted_count = 0
+    for run_id in run_ids:
+        try:
+            log.info(f"Deleting run {run_id} ({deleted_count + 1}/{len(run_ids)})...")
+            delete_workflow_run(repo, run_id, token)
+            deleted_count += 1
+        except Exception as e:
+            log.error(f"Failed to delete run {run_id}: {e}")
+
+    log.info(f"Successfully deleted {deleted_count} workflow runs")
+
 
 def download_zipfile(
     download_url: str,
@@ -459,118 +553,142 @@ def download_artifacts(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Download artifacts from a GitHub Actions workflow run",
+        description="GitHub Actions tools for artifact downloading and run management",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
-  # Using owner/repo and run_id (flattened output - all files in one dir)
-  python download_artifacts.py wisdom-valley/knowlify-ai 19810307537
+  # Download artifacts using owner/repo and run_id
+  python main.py download wisdom-valley/knowlify-ai 19810307537
 
-  # With custom output directory (flattened)
-  python download_artifacts.py wisdom-valley/knowlify-ai 19810307537 ./my-artifacts
+  # Download artifacts using full GitHub Actions URL
+  python main.py download https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537
 
-  # Keep artifacts in separate subdirectories
-  python download_artifacts.py wisdom-valley/knowlify-ai 19810307537 --no-flatten
+  # Delete ALL workflow runs in a repository
+  python main.py delete-runs wisdom-valley/knowlify-ai
 
-  # Using full GitHub Actions URL
-  python download_artifacts.py https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537
-
-  # Using full GitHub Actions URL with custom output directory
-  python download_artifacts.py https://github.com/wisdom-valley/knowlify-ai/actions/runs/19810307537 ./my-artifacts
+  # Delete ALL workflow runs using repository Actions URL
+  python main.py delete-runs https://github.com/wisdom-valley/knowlify-ai/actions
         """
     )
 
-    parser.add_argument(
-        "input",
-        help="Either 'owner/repo' (requires run_id as next arg) or full GitHub Actions run URL"
-    )
-
-    parser.add_argument(
-        "run_id_or_output",
-        nargs="?",
-        help="Either run_id (if input is owner/repo) or output directory (if input is URL)"
-    )
-
-    parser.add_argument(
-        "output_dir",
-        nargs="?",
-        help="Output directory for artifacts (only used with owner/repo format)"
-    )
-
+    # Shared arguments
     parser.add_argument(
         "--token",
         help="GitHub API token (default: read from GITHUB_TOKEN env var or ghtoken)"
     )
 
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest="command", help="Commands", required=True)
+
+    # Download subcommand
+    download_parser = subparsers.add_parser(
+        "download",
+        help="Download artifacts from a GitHub Actions workflow run"
+    )
+    download_parser.add_argument(
+        "input",
+        help="Either 'owner/repo' or full GitHub Actions run URL"
+    )
+    download_parser.add_argument(
+        "run_id_or_output",
+        nargs="?",
+        help="Either run_id (if input is owner/repo) or output directory (if input is URL)"
+    )
+    download_parser.add_argument(
+        "output_dir",
+        nargs="?",
+        help="Output directory for artifacts (only used with owner/repo format)"
+    )
+    download_parser.add_argument(
         "--no-flatten",
         action="store_true",
-        help="Keep artifacts in separate subdirectories instead of flattening to one directory"
+        help="Keep artifacts in separate subdirectories instead of flattening"
     )
-
-    parser.add_argument(
+    download_parser.add_argument(
         "--no-wait",
         action="store_true",
-        help="Do not wait for workflow to complete (download immediately if artifacts exist)"
+        help="Do not wait for workflow to complete"
     )
-
-    parser.add_argument(
+    download_parser.add_argument(
         "--poll-interval",
         type=int,
         default=60,
         help="Polling interval in seconds when waiting for workflow (default: 60)"
     )
-
-    parser.add_argument(
+    download_parser.add_argument(
         "--timeout",
         type=int,
         default=1800,
         help="Maximum wait time in seconds (default: 1800 = 30 minutes)"
     )
 
+    # Delete-runs subcommand
+    delete_parser = subparsers.add_parser(
+        "delete-runs",
+        help="Delete all workflow runs in a repository"
+    )
+    delete_parser.add_argument(
+        "repo",
+        help="Repository (owner/repo) or repository Actions URL"
+    )
+
     args = parser.parse_args()
 
-    # Parse input
-    repo = None
-    run_id = None
-    output_dir = None
+    # Routing based on command
+    if args.command == "delete-runs":
+        repo_input = args.repo
+        if repo_input.startswith("http://") or repo_input.startswith("https://"):
+            try:
+                repo = parse_repo_url(repo_input)
+            except ValueError as e:
+                log.error(str(e))
+                sys.exit(1)
+        else:
+            repo = repo_input
 
-    if args.input.startswith("http://") or args.input.startswith("https://"):
-        # URL format: https://github.com/owner/repo/actions/runs/run_id [output_dir]
+        delete_all_workflow_runs(repo, args.token)
+        return
+
+    elif args.command == "download":
+        repo = None
+        run_id = None
+        output_dir = None
+
+        if args.input.startswith("http://") or args.input.startswith("https://"):
+            # URL format: https://github.com/owner/repo/actions/runs/run_id [output_dir]
+            try:
+                repo, run_id = parse_run_url(args.input)
+            except ValueError as e:
+                log.error(str(e))
+                sys.exit(1)
+            # run_id_or_output becomes output_dir for URL format
+            output_dir = args.run_id_or_output
+        else:
+            # owner/repo format: owner/repo run_id [output_dir]
+            if not args.run_id_or_output:
+                log.error(
+                    "Error: When using 'owner/repo' format, run_id is required\n"
+                    "Usage: python main.py download owner/repo run_id [output_dir]"
+                )
+                sys.exit(1)
+
+            repo = args.input
+            run_id = args.run_id_or_output
+            output_dir = args.output_dir
+
+        # Download artifacts
         try:
-            repo, run_id = parse_run_url(args.input)
-        except ValueError as e:
+            flatten = not args.no_flatten
+            wait = not args.no_wait
+            download_artifacts(
+                repo, run_id, output_dir, args.token,
+                flatten=flatten,
+                wait=wait,
+                poll_interval=args.poll_interval,
+                timeout=args.timeout
+            )
+        except RuntimeError as e:
             log.error(str(e))
             sys.exit(1)
-        # run_id_or_output becomes output_dir for URL format
-        output_dir = args.run_id_or_output
-    else:
-        # owner/repo format: owner/repo run_id [output_dir]
-        if not args.run_id_or_output:
-            log.error(
-                "Error: When using 'owner/repo' format, run_id is required\n"
-                "Usage: python download_artifacts.py owner/repo run_id [output_dir]"
-            )
-            sys.exit(1)
-
-        repo = args.input
-        run_id = args.run_id_or_output
-        output_dir = args.output_dir
-
-    # Download artifacts
-    try:
-        flatten = not args.no_flatten
-        wait = not args.no_wait
-        download_artifacts(
-            repo, run_id, output_dir, args.token,
-            flatten=flatten,
-            wait=wait,
-            poll_interval=args.poll_interval,
-            timeout=args.timeout
-        )
-    except RuntimeError as e:
-        log.error(str(e))
-        sys.exit(1)
 
 
 if __name__ == "__main__":
