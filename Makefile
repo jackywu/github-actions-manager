@@ -1,7 +1,7 @@
 .PHONY: build clean install
 
 build:
-	uv run --all-groups -m PyInstaller -y main.spec
+	uv run --all-groups -m PyInstaller -y cli.spec
 
 install:
 	chmod +x dist/github-actions-manager
