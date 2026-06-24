@@ -124,6 +124,8 @@ class RepoPanel(QWidget):
         self._list.clear()
         self._all_items.clear()
 
+        repos = sorted(repos, key=lambda r: r.get("full_name", "").lower())
+
         for repo in repos:
             full_name: str = repo["full_name"]
             private: bool = repo.get("private", False)
