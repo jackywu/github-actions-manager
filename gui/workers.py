@@ -89,7 +89,7 @@ class FetchRunsWorker(QThread):
 # ---------------------------------------------------------------------------
 class DeleteRunsWorker(QThread):
     progress = Signal(int, int)   # (current, total)
-    run_deleted = Signal(int)     # run_id that was deleted
+    run_deleted = Signal(object)  # run_id that was deleted
     done = Signal(int)            # total successfully deleted
     error = Signal(str)
 
@@ -114,14 +114,50 @@ class DeleteRunsWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
+# DownloadArtifactWorker
+# ---------------------------------------------------------------------------
+class DownloadArtifactWorker(QThread):
+    progress = Signal(str)
+    done = Signal(object, list)  # run_id, list of local paths
+    error = Signal(object, str)  # run_id, error message
+
+    def __init__(self, repo: str, run_id: int, token: str, download_dir: str) -> None:
+        super().__init__()
+        self.repo = repo
+        self.run_id = run_id
+        self.token = token
+        self.download_dir = Path(download_dir)
+
+    def run(self) -> None:
+        try:
+            self.progress.emit(f"⬇  Downloading artifacts for run #{self.run_id} …")
+            artifacts = api.list_artifacts(self.repo, self.run_id, self.token)
+            if not artifacts:
+                self.error.emit(self.run_id, "No artifacts found")
+                return
+            headers = api.make_headers(self.token)
+            all_files: list[str] = []
+            for artifact in artifacts:
+                if artifact.get("expired"):
+                    continue
+                url = artifact["archive_download_url"]
+                files = _extract_zip(url, headers, self.download_dir)
+                all_files.extend(str(f) for f in files)
+            self.done.emit(self.run_id, all_files)
+        except Exception as exc:
+            self.error.emit(self.run_id, str(exc))
+
+
+
+# ---------------------------------------------------------------------------
 # MonitorWorker
 # ---------------------------------------------------------------------------
 class MonitorWorker(QThread):
     status_update = Signal(str)           # human-readable status line
     new_run_found = Signal(dict)          # full run dict of new successful run
-    download_started = Signal(int)        # run_id
-    download_complete = Signal(int, list) # run_id, list[str] of local paths
-    download_failed = Signal(int, str)    # run_id, error message
+    download_started = Signal(object)     # run_id
+    download_complete = Signal(object, list) # run_id, list[str] of local paths
+    download_failed = Signal(object, str) # run_id, error message
     stopped = Signal()
 
     def __init__(

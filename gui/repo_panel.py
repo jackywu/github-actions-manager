@@ -63,8 +63,9 @@ class RepoPanel(QWidget):
         header_layout.addWidget(title)
         header_layout.addStretch()
 
-        self._refresh_btn = QPushButton("⟳")
+        self._refresh_btn = QPushButton("🔄")
         self._refresh_btn.setFixedSize(32, 32)
+        self._refresh_btn.setStyleSheet("padding: 0;")
         self._refresh_btn.setToolTip("Refresh repository list")
         self._refresh_btn.clicked.connect(self.refresh_requested)
         header_layout.addWidget(self._refresh_btn)
@@ -105,16 +106,17 @@ class RepoPanel(QWidget):
     # ------------------------------------------------------------------  Public
     def set_loading(self, loading: bool) -> None:
         self._refresh_btn.setEnabled(not loading)
-        self._loading_label.setVisible(loading)
+        self._loading_label.setVisible(loading and self._list.count() == 0)
         if loading:
-            self._list.setVisible(False)
-            self._count_label.setText("")
+            if self._list.count() == 0:
+                self._list.setVisible(False)
+                self._count_label.setText("")
             self._spin_idx = 0
             self._spin_timer.start(100)
         else:
             self._list.setVisible(True)
             self._spin_timer.stop()
-            self._refresh_btn.setText("⟳")
+            self._refresh_btn.setText("🔄")
 
     def _update_spinner(self) -> None:
         self._refresh_btn.setText(self._spin_chars[self._spin_idx])

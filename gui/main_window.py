@@ -81,6 +81,7 @@ class MainWindow(QMainWindow):
         self._repo_panel.refresh_requested.connect(self._load_repos)
         self._runs_panel.monitor_toggled.connect(self._toggle_monitor)
         self._runs_panel.refresh_requested.connect(self._load_runs)
+        self._runs_panel.download_requested.connect(self._on_download_requested)
 
     def _build_menus(self) -> None:
         menu_bar = self.menuBar()
@@ -88,7 +89,7 @@ class MainWindow(QMainWindow):
         # File menu
         file_menu = menu_bar.addMenu("File")
 
-        settings_action = QAction("⚙ Settings…", self)
+        settings_action = QAction("⚙️ Settings…", self)
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self._open_settings)
         file_menu.addAction(settings_action)
@@ -103,7 +104,7 @@ class MainWindow(QMainWindow):
         # View menu
         view_menu = menu_bar.addMenu("View")
 
-        refresh_repos_action = QAction("⟳ Refresh Repos", self)
+        refresh_repos_action = QAction("🔄 Refresh Repos", self)
         refresh_repos_action.setShortcut("Ctrl+R")
         refresh_repos_action.triggered.connect(self._load_repos)
         view_menu.addAction(refresh_repos_action)
@@ -275,6 +276,28 @@ class MainWindow(QMainWindow):
         self._update_status()
         self._runs_panel.append_log(f"⚫ Monitor stopped for {repo}")
 
+    def _on_download_requested(self, repo: str, run_id: int) -> None:
+        from .workers import DownloadArtifactWorker
+
+        monitored = self.config.get_monitored_repos()
+        existing = monitored.get(repo, {})
+        dl_dir = existing.get("download_dir", str(Path(self.config.workspace) / repo))
+
+        worker = DownloadArtifactWorker(repo, run_id, self.config.token, dl_dir)
+        worker.progress.connect(lambda msg: self._on_monitor_status(repo, msg))
+        worker.done.connect(
+            lambda rid, files: self._on_download_complete(repo, rid, files, dl_dir)
+        )
+        worker.error.connect(
+            lambda rid, err: self._on_download_failed(repo, rid, err)
+        )
+
+        if not hasattr(self, "_download_workers"):
+            self._download_workers = []
+        self._download_workers.append(worker)
+        worker.finished.connect(lambda w=worker: self._download_workers.remove(w))
+        worker.start()
+
     # Monitor signal handlers
     def _on_monitor_status(self, repo: str, msg: str) -> None:
         if self._current_repo == repo:
@@ -292,12 +315,24 @@ class MainWindow(QMainWindow):
             f"⬇  Downloading artifacts for run #{run_id} …"
         )
 
-    def _on_download_complete(self, repo: str, run_id: int, files: list[str]) -> None:
+    def _on_download_complete(self, repo: str, run_id: int, files: list[str], dl_dir: str = "") -> None:
         self._runs_panel.append_log(
             f"✅ Downloaded {len(files)} file(s) for run #{run_id}"
         )
         for path in files:
             self._runs_panel.append_log(f"   📄 {path}")
+
+        try:
+            import plyer
+            folder_str = dl_dir or (str(Path(files[0]).parent) if files else "Unknown directory")
+            plyer.notification.notify(
+                title="Artifacts Downloaded",
+                message=f"Run #{run_id} from {repo} downloaded to {folder_str}",
+                app_name="GitHub Actions Manager",
+                timeout=5
+            )
+        except Exception as exc:
+            self._runs_panel.append_log(f"⚠ Could not show notification: {exc}")
 
     def _on_download_failed(self, repo: str, run_id: int, err: str) -> None:
         self._runs_panel.append_log(

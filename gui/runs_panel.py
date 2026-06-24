@@ -37,6 +37,7 @@ _COL_BRANCH = 4
 _COL_EVENT = 5
 _COL_CREATED = 6
 _COL_DURATION = 7
+_COL_ACTIONS = 8
 
 _ACTIVE_STATUSES = {"in_progress", "queued", "waiting", "requested", "pending"}
 _RUN_ID_ROLE = Qt.ItemDataRole.UserRole
@@ -83,6 +84,7 @@ class RunsPanel(QWidget):
     # Signals emitted upward to MainWindow
     monitor_toggled = Signal(str)   # repo — request start/stop monitor
     refresh_requested = Signal(str, int, int)  # repo, page, workflow_id (0 = all)
+    download_requested = Signal(str, object)  # repo, run_id
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -154,7 +156,7 @@ class RunsPanel(QWidget):
         toolbar_layout.addWidget(self._monitor_btn)
 
         # Refresh
-        self._refresh_btn = QPushButton("⟳ Refresh")
+        self._refresh_btn = QPushButton("🔄 Refresh")
         self._refresh_btn.clicked.connect(self._do_refresh)
         self._refresh_btn.setEnabled(False)
         toolbar_layout.addWidget(self._refresh_btn)
@@ -170,9 +172,9 @@ class RunsPanel(QWidget):
 
         # === Table ===
         self._table = QTableWidget()
-        self._table.setColumnCount(8)
+        self._table.setColumnCount(9)
         self._table.setHorizontalHeaderLabels(
-            ["", "#", "Workflow / Run", "Status", "Branch", "Event", "Created", "Duration"]
+            ["", "#", "Workflow / Run", "Status", "Branch", "Event", "Created", "Duration", "Actions"]
         )
         self._table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self._table.setAlternatingRowColors(True)
@@ -189,10 +191,12 @@ class RunsPanel(QWidget):
         hdr.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
         hdr.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(8, QHeaderView.ResizeMode.Fixed)
 
         self._table.setColumnWidth(0, 40)
         self._table.setColumnWidth(1, 60)
         self._table.setColumnWidth(3, 120)
+        self._table.setColumnWidth(8, 240)
         self._table.verticalHeader().setDefaultSectionSize(40)
 
         layout.addWidget(self._table, stretch=1)
@@ -379,6 +383,35 @@ class RunsPanel(QWidget):
             dur_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
             dur_item.setForeground(QColor("#6c7086"))
             self._table.setItem(row, _COL_DURATION, dur_item)
+
+            # Col 8 — Actions
+            actions_widget = QWidget()
+            actions_layout = QHBoxLayout(actions_widget)
+            actions_layout.setContentsMargins(4, 2, 4, 2)
+            actions_layout.setSpacing(8)
+
+            dl_btn = QPushButton("Download")
+            dl_btn.setFixedHeight(24)
+            dl_btn.setMinimumWidth(100)
+            dl_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            dl_btn.clicked.connect(lambda checked, rid=run_id: self.download_requested.emit(self._repo, rid))
+
+            del_btn = QPushButton("Delete")
+            del_btn.setFixedHeight(24)
+            del_btn.setMinimumWidth(80)
+            del_btn.setObjectName("btn_danger")
+            del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            del_btn.clicked.connect(lambda checked, rid=run_id: self._start_delete([rid]))
+
+            if is_active:
+                del_btn.setEnabled(False)
+                dl_btn.setEnabled(False)
+
+            actions_layout.addWidget(dl_btn)
+            actions_layout.addWidget(del_btn)
+            actions_layout.addStretch()
+
+            self._table.setCellWidget(row, _COL_ACTIONS, actions_widget)
 
         # Update pagination
         total_pages = max(1, math.ceil(self._total_count / self._per_page))
