@@ -48,8 +48,10 @@ class MainWindow(QMainWindow):
 
         # Auto-load repos if token is already set; otherwise open settings
         if self.config.token:
-            self._load_repos()
+            if self.config.cached_repos:
+                self._repo_panel.populate(self.config.cached_repos)
             self._restore_monitors()
+            self._load_repos()
         else:
             self._open_settings()
 
@@ -146,6 +148,7 @@ class MainWindow(QMainWindow):
 
     def _on_repos_fetched(self, repos: list[dict]) -> None:
         self._repo_panel.set_loading(False)
+        self.config.cached_repos = repos
         self._repo_panel.populate(repos)
         # Refresh monitor indicators
         for repo in self._monitors:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -37,6 +37,11 @@ class RepoPanel(QWidget):
 
         self._monitored_repos: set[str] = set()
         self._all_items: list[QListWidgetItem] = []   # for search filtering
+
+        self._spin_timer = QTimer(self)
+        self._spin_timer.timeout.connect(self._update_spinner)
+        self._spin_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self._spin_idx = 0
 
         self._build_ui()
 
@@ -104,8 +109,16 @@ class RepoPanel(QWidget):
         if loading:
             self._list.setVisible(False)
             self._count_label.setText("")
+            self._spin_idx = 0
+            self._spin_timer.start(100)
         else:
             self._list.setVisible(True)
+            self._spin_timer.stop()
+            self._refresh_btn.setText("⟳")
+
+    def _update_spinner(self) -> None:
+        self._refresh_btn.setText(self._spin_chars[self._spin_idx])
+        self._spin_idx = (self._spin_idx + 1) % len(self._spin_chars)
 
     def populate(self, repos: list[dict]) -> None:
         self._list.clear()

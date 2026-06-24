@@ -6,8 +6,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-CONFIG_DIR = Path.home() / ".github-actions-manager"
+import platformdirs
+
+APP_NAME = "github-actions-manager"
+CONFIG_DIR = platformdirs.user_config_path(APP_NAME)
 CONFIG_FILE = CONFIG_DIR / "config.json"
+
+CACHE_DIR = platformdirs.user_cache_path(APP_NAME)
+CACHE_FILE = CACHE_DIR / "repos_cache.json"
 
 _DEFAULTS: dict[str, Any] = {
     "github_token": "",
@@ -35,11 +41,25 @@ class Config:
             except Exception:
                 pass
 
+        if CACHE_FILE.exists():
+            try:
+                with CACHE_FILE.open("r", encoding="utf-8") as fh:
+                    self._data["cached_repos"] = json.load(fh)
+            except Exception:
+                pass
+
     def save(self) -> None:
         """Persist config to disk."""
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        data_to_save = {k: v for k, v in self._data.items() if k != "cached_repos"}
         with CONFIG_FILE.open("w", encoding="utf-8") as fh:
-            json.dump(self._data, fh, indent=2, ensure_ascii=False)
+            json.dump(data_to_save, fh, indent=2, ensure_ascii=False)
+
+    def save_cache(self) -> None:
+        """Persist cache to disk."""
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with CACHE_FILE.open("w", encoding="utf-8") as fh:
+            json.dump(self._data.get("cached_repos", []), fh, indent=2, ensure_ascii=False)
 
     # ------------------------------------------------------------- Token ----
     @property
@@ -109,3 +129,13 @@ class Config:
         repos = self._data.get("monitored_repos", {})
         cfg = repos.get(repo, {})
         return set(cfg.get("downloaded_run_ids", []))
+
+    # ------------------------------------------------------------- Cache ----
+    @property
+    def cached_repos(self) -> list[dict]:
+        return self._data.get("cached_repos", [])
+
+    @cached_repos.setter
+    def cached_repos(self, value: list[dict]) -> None:
+        self._data["cached_repos"] = value
+        self.save_cache()
