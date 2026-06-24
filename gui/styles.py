@@ -5,48 +5,46 @@ def get_stylesheet(theme: str = "light") -> str:
     is_dark = (theme == "dark")
 
     # ---- Colors: Catppuccin Mocha (dark) vs Latte (light) ----
-    bg_base = "#1e1e2e" if is_dark else "#eff1f5"
-    bg_mantle = "#181825" if is_dark else "#e6e9ef"
-    bg_crust = "#11111b" if is_dark else "#dce0e8"
+    bg_base = "#1e1e2e" if is_dark else "#ffffff"
+    bg_mantle = "#181825" if is_dark else "#f8fafc"
+    bg_crust = "#11111b" if is_dark else "#f1f5f9"
 
-    surf0 = "#313244" if is_dark else "#ccd0da"
-    surf1 = "#45475a" if is_dark else "#bcc0cc"
-    surf2 = "#585b70" if is_dark else "#acb0be"
+    surf0 = "#313244" if is_dark else "#f1f5f9"
+    surf1 = "#45475a" if is_dark else "#e2e8f0"
+    surf2 = "#585b70" if is_dark else "#cbd5e1"
 
-    text_main = "#cdd6f4" if is_dark else "#4c4f69"
-    text_sub = "#a6adc8" if is_dark else "#6c6f85"
-    text_muted = "#6c7086" if is_dark else "#9ca0b0"
+    text_main = "#cdd6f4" if is_dark else "#1e293b"
+    text_sub = "#a6adc8" if is_dark else "#475569"
+    text_muted = "#6c7086" if is_dark else "#64748b"
 
-    primary = "#cba6f7" if is_dark else "#7287fd"
-    primary_hover = "#d4b9f8" if is_dark else "#8aa2fd"
-    primary_press = "#b89af5" if is_dark else "#5c74fc"
+    primary = "#cba6f7" if is_dark else "#3b82f6"
+    primary_hover = "#d4b9f8" if is_dark else "#60a5fa"
+    primary_press = "#b89af5" if is_dark else "#2563eb"
 
-    danger = "#f38ba8" if is_dark else "#d20f39"
-    danger_hover = "#f5a3b8" if is_dark else "#e82950"
-    danger_press = "#e07090" if is_dark else "#ba0b30"
+    danger = "#f38ba8" if is_dark else "#ef4444"
+    danger_hover = "#f5a3b8" if is_dark else "#f87171"
+    danger_press = "#e07090" if is_dark else "#dc2626"
 
-    success = "#a6e3a1" if is_dark else "#40a02b"
-    success_hover = "#b8e9b4" if is_dark else "#50b83c"
+    success = "#a6e3a1" if is_dark else "#10b981"
+    success_hover = "#b8e9b4" if is_dark else "#34d399"
 
-    blue = "#89b4fa" if is_dark else "#1e66f5"
+    blue = "#89b4fa" if is_dark else "#0ea5e9"
 
     # Status badge colors
-    # For dark mode, we use dark backgrounds with bright text.
-    # For light mode, we use pale backgrounds with dark text.
-    st_success_bg = "#1c4a2c" if is_dark else "#e2f5e0"
-    st_success_fg = "#a6e3a1" if is_dark else "#2e7a1f"
+    st_success_bg = "#1c4a2c" if is_dark else "#d1fae5"
+    st_success_fg = "#a6e3a1" if is_dark else "#059669"
 
-    st_failure_bg = "#4a1c2c" if is_dark else "#fce6eb"
-    st_failure_fg = "#f38ba8" if is_dark else "#a80b2d"
+    st_failure_bg = "#4a1c2c" if is_dark else "#fee2e2"
+    st_failure_fg = "#f38ba8" if is_dark else "#e11d48"
 
-    st_cancelled_bg = "#2a2a3e" if is_dark else "#e5e7ed"
-    st_cancelled_fg = "#6c7086" if is_dark else "#5c5f77"
+    st_cancelled_bg = "#2a2a3e" if is_dark else "#f1f5f9"
+    st_cancelled_fg = "#6c7086" if is_dark else "#475569"
 
-    st_skipped_bg = "#3a3a20" if is_dark else "#fdf6e3"
-    st_skipped_fg = "#f9e2af" if is_dark else "#b58900"
+    st_skipped_bg = "#3a3a20" if is_dark else "#fef3c7"
+    st_skipped_fg = "#f9e2af" if is_dark else "#d97706"
 
-    st_inprogress_bg = "#1a2a4a" if is_dark else "#e1ebfb"
-    st_inprogress_fg = "#89b4fa" if is_dark else "#1451d6"
+    st_inprogress_bg = "#1a2a4a" if is_dark else "#dbeafe"
+    st_inprogress_fg = "#89b4fa" if is_dark else "#2563eb"
 
     return f"""
 /* =========================================================

@@ -64,39 +64,16 @@ class SettingsDialog(QDialog):
         self._token_edit = QLineEdit()
         self._token_edit.setPlaceholderText("ghp_xxxxxxxxxxxxxxxxxxxx")
         self._token_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self._token_edit.setMinimumHeight(32)
         token_row.addWidget(self._token_edit)
 
         self._toggle_btn = QPushButton("Show")
         self._toggle_btn.setFixedWidth(70)
+        self._toggle_btn.setMinimumHeight(32)
         self._toggle_btn.clicked.connect(self._toggle_visibility)
         token_row.addWidget(self._toggle_btn)
 
         root.addLayout(token_row)
-
-        # --- Workspace input row ---
-        workspace_label = QLabel("Workspace Directory")
-        workspace_label.setObjectName("panel_title")
-        root.addWidget(workspace_label)
-
-        ws_hint = QLabel(
-            "Downloads will be organized by repository inside this directory."
-        )
-        ws_hint.setProperty("color", "sub")
-        root.addWidget(ws_hint)
-
-        ws_row = QHBoxLayout()
-        ws_row.setSpacing(8)
-
-        self._workspace_edit = QLineEdit()
-        self._workspace_edit.setPlaceholderText("Select workspace directory…")
-        ws_row.addWidget(self._workspace_edit)
-
-        self._ws_browse_btn = QPushButton("Browse…")
-        self._ws_browse_btn.setFixedWidth(80)
-        self._ws_browse_btn.clicked.connect(self._browse_workspace)
-        ws_row.addWidget(self._ws_browse_btn)
-
-        root.addLayout(ws_row)
 
         # --- Validate button + status label ---
         validate_row = QHBoxLayout()
@@ -104,6 +81,7 @@ class SettingsDialog(QDialog):
 
         self._validate_btn = QPushButton("Validate Token")
         self._validate_btn.setObjectName("btn_primary")
+        self._validate_btn.setMinimumHeight(32)
         self._validate_btn.clicked.connect(self._validate_token)
         validate_row.addWidget(self._validate_btn)
 
@@ -135,6 +113,33 @@ class SettingsDialog(QDialog):
 
         self._user_widget.setVisible(False)
         root.addWidget(self._user_widget)
+
+        # --- Workspace input row ---
+        workspace_label = QLabel("Workspace Directory")
+        workspace_label.setObjectName("panel_title")
+        root.addWidget(workspace_label)
+
+        ws_hint = QLabel(
+            "Downloads will be organized by repository inside this directory."
+        )
+        ws_hint.setProperty("color", "sub")
+        root.addWidget(ws_hint)
+
+        ws_row = QHBoxLayout()
+        ws_row.setSpacing(8)
+
+        self._workspace_edit = QLineEdit()
+        self._workspace_edit.setPlaceholderText("Select workspace directory…")
+        self._workspace_edit.setMinimumHeight(32)
+        ws_row.addWidget(self._workspace_edit)
+
+        self._ws_browse_btn = QPushButton("Browse…")
+        self._ws_browse_btn.setFixedWidth(100)
+        self._ws_browse_btn.setMinimumHeight(32)
+        self._ws_browse_btn.clicked.connect(self._browse_workspace)
+        ws_row.addWidget(self._ws_browse_btn)
+
+        root.addLayout(ws_row)
 
         # --- Dialog buttons ---
         buttons = QDialogButtonBox(
