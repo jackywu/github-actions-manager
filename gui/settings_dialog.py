@@ -29,7 +29,7 @@ class SettingsDialog(QDialog):
         self.config = config
         self._worker: FetchUserWorker | None = None
 
-        self.setWindowTitle("GitHub Token Settings")
+        self.setWindowTitle("Settings")
         self.setMinimumWidth(480)
         self.setModal(True)
 

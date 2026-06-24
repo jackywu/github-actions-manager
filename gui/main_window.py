@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
         # File menu
         file_menu = menu_bar.addMenu("File")
 
-        settings_action = QAction("⚙ Token Settings…", self)
+        settings_action = QAction("⚙ Settings…", self)
         settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self._open_settings)
         file_menu.addAction(settings_action)
@@ -314,7 +314,7 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------  Status
     def _update_status(self) -> None:
         if not self.config.token:
-            self._status_bar.showMessage("⚠ No token set — File → Token Settings")
+            self._status_bar.showMessage("⚠ No token set — File → Settings")
             return
         n = len(self._monitors)
         if n:
