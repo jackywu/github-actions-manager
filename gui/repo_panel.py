@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, Signal, QTimer, QPoint
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -28,6 +29,7 @@ class RepoPanel(QWidget):
 
     repo_selected = Signal(str)   # emits "owner/repo" when user clicks a row
     refresh_requested = Signal()  # emits when user clicks Refresh
+    star_toggled = Signal(str, bool)  # emits "owner/repo", is_starred
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -36,7 +38,9 @@ class RepoPanel(QWidget):
         self.setMaximumWidth(320)
 
         self._monitored_repos: set[str] = set()
+        self._starred_repos: set[str] = set()
         self._all_items: list[QListWidgetItem] = []   # for search filtering
+        self._last_repos_data: list[dict] = []
 
         self._spin_timer = QTimer(self)
         self._spin_timer.timeout.connect(self._update_spinner)
@@ -101,6 +105,8 @@ class RepoPanel(QWidget):
         self._list.setObjectName("repo_list")
         self._list.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._list.currentItemChanged.connect(self._on_item_changed)
+        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._list.customContextMenuRequested.connect(self._show_context_menu)
         layout.addWidget(self._list, stretch=1)
 
     # ------------------------------------------------------------------  Public
@@ -122,11 +128,19 @@ class RepoPanel(QWidget):
         self._refresh_btn.setText(self._spin_chars[self._spin_idx])
         self._spin_idx = (self._spin_idx + 1) % len(self._spin_chars)
 
+    def set_starred_repos(self, repos: set[str]) -> None:
+        self._starred_repos = set(repos)
+
     def populate(self, repos: list[dict]) -> None:
+        self._last_repos_data = repos
         self._list.clear()
         self._all_items.clear()
 
-        repos = sorted(repos, key=lambda r: r.get("full_name", "").lower())
+        def sort_key(r: dict) -> tuple[int, str]:
+            full_name = r.get("full_name", "")
+            return (0 if full_name in self._starred_repos else 1, full_name.lower())
+
+        repos = sorted(repos, key=sort_key)
 
         for repo in repos:
             full_name: str = repo["full_name"]
@@ -134,6 +148,8 @@ class RepoPanel(QWidget):
             language: str = repo.get("language") or ""
 
             display = full_name
+            if full_name in self._starred_repos:
+                display = "⭐ " + display
             if full_name in self._monitored_repos:
                 display += _MONITOR_INDICATOR
 
@@ -166,6 +182,8 @@ class RepoPanel(QWidget):
             full_name = item.data(_REPO_ROLE)
             if full_name == repo:
                 base_text = full_name
+                if full_name in self._starred_repos:
+                    base_text = "⭐ " + base_text
                 if full_name in self._monitored_repos:
                     base_text += _MONITOR_INDICATOR
                 item.setText(base_text)
@@ -180,6 +198,35 @@ class RepoPanel(QWidget):
                 break
 
     # ------------------------------------------------------------------  Private
+    def _show_context_menu(self, pos: QPoint) -> None:
+        item = self._list.itemAt(pos)
+        if not item:
+            return
+        full_name = item.data(_REPO_ROLE)
+        menu = QMenu(self)
+
+        is_starred = full_name in self._starred_repos
+        action_text = "Unstar" if is_starred else "Star"
+        star_action = menu.addAction(f"{action_text} Repository")
+
+        action = menu.exec(self._list.mapToGlobal(pos))
+        if action == star_action:
+            if is_starred:
+                self._starred_repos.discard(full_name)
+            else:
+                self._starred_repos.add(full_name)
+            self.star_toggled.emit(full_name, not is_starred)
+
+            selected = self._list.currentItem()
+            selected_name = selected.data(_REPO_ROLE) if selected else None
+
+            if self._last_repos_data:
+                self._list.blockSignals(True)
+                self.populate(self._last_repos_data)
+                if selected_name:
+                    self.select_repo(selected_name)
+                self._list.blockSignals(False)
+
     def _on_item_changed(
         self,
         current: QListWidgetItem | None,

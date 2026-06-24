@@ -67,16 +67,19 @@ class MonitorDialog(QDialog):
         dir_row.setSpacing(8)
         self._dir_edit = QLineEdit(download_dir)
         self._dir_edit.setPlaceholderText("Select download directory…")
+        self._dir_edit.setMinimumHeight(32)
         dir_row.addWidget(self._dir_edit)
 
         browse_btn = QPushButton("Browse…")
-        browse_btn.setFixedWidth(80)
+        browse_btn.setMinimumWidth(100)
+        browse_btn.setMinimumHeight(32)
         browse_btn.clicked.connect(self._browse_dir)
         dir_row.addWidget(browse_btn)
         form.addRow("Download directory:", dir_row)
 
         # Poll interval
         self._interval_spin = QSpinBox()
+        self._interval_spin.setMinimumHeight(32)
         self._interval_spin.setRange(10, 3600)
         self._interval_spin.setValue(interval)
         self._interval_spin.setSuffix("  seconds")

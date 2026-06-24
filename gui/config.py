@@ -20,6 +20,7 @@ _DEFAULTS: dict[str, Any] = {
     "workspace": str(Path.home() / "github_helper"),
     "theme": "light",
     "monitored_repos": {},
+    "starred_repos": [],
 }
 
 
@@ -95,6 +96,20 @@ class Config:
     def get_monitored_repos(self) -> dict[str, dict]:
         """Return a copy of the monitored repos dict."""
         return dict(self._data.get("monitored_repos", {}))
+
+    def get_starred_repos(self) -> set[str]:
+        """Return a set of starred repos."""
+        return set(self._data.get("starred_repos", []))
+
+    def set_starred(self, repo: str, is_starred: bool) -> None:
+        """Add or remove a repo from the starred list."""
+        starred = set(self._data.get("starred_repos", []))
+        if is_starred:
+            starred.add(repo)
+        else:
+            starred.discard(repo)
+        self._data["starred_repos"] = list(starred)
+        self.save()
 
     def set_monitor(self, repo: str, download_dir: str, poll_interval: int) -> None:
         """Add or update a monitoring entry for *repo*."""

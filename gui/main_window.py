@@ -46,6 +46,8 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._build_menus()
 
+        self._repo_panel.set_starred_repos(self.config.get_starred_repos())
+
         # Auto-load repos if token is already set; otherwise open settings
         if self.config.token:
             if self.config.cached_repos:
@@ -79,6 +81,7 @@ class MainWindow(QMainWindow):
         # Wire signals
         self._repo_panel.repo_selected.connect(self._on_repo_selected)
         self._repo_panel.refresh_requested.connect(self._load_repos)
+        self._repo_panel.star_toggled.connect(self._on_star_toggled)
         self._runs_panel.monitor_toggled.connect(self._toggle_monitor)
         self._runs_panel.refresh_requested.connect(self._load_runs)
         self._runs_panel.download_requested.connect(self._on_download_requested)
@@ -165,8 +168,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self, "Authentication Failed",
                 "The GitHub token is invalid or expired.\n"
-                "Please update it in File → Token Settings."
+                "Please update it in File → Settings."
             )
+
+    # ----------------------------------------------------------------  Stars
+    def _on_star_toggled(self, repo: str, is_starred: bool) -> None:
+        self.config.set_starred(repo, is_starred)
 
     # ----------------------------------------------------------------  Runs
     def _on_repo_selected(self, repo: str) -> None:
