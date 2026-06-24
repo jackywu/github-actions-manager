@@ -212,9 +212,11 @@ class MainWindow(QMainWindow):
         monitored = self.config.get_monitored_repos()
         existing = monitored.get(repo, {})
 
+        default_dir = str(Path(self.config.workspace) / repo)
+
         dlg = MonitorDialog(
             repo,
-            current_download_dir=existing.get("download_dir", ""),
+            current_download_dir=existing.get("download_dir", default_dir),
             current_interval=existing.get("poll_interval", 60),
             parent=self,
         )
@@ -304,7 +306,8 @@ class MainWindow(QMainWindow):
         """On startup, re-launch all monitors that were active in the last session."""
         monitored = self.config.get_monitored_repos()
         for repo, cfg in monitored.items():
-            download_dir = cfg.get("download_dir", str(Path.home() / "Downloads" / "github-artifacts"))
+            default_dir = str(Path(self.config.workspace) / repo)
+            download_dir = cfg.get("download_dir", default_dir)
             poll_interval = cfg.get("poll_interval", 60)
             self._launch_monitor(repo, download_dir, poll_interval)
 

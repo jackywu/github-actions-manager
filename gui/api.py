@@ -35,7 +35,7 @@ def list_repos(token: str) -> list[dict]:
         r = requests.get(
             f"{API_BASE}/user/repos",
             headers=make_headers(token),
-            params={"type": "owner", "per_page": 100, "page": page, "sort": "updated"},
+            params={"affiliation": "owner,organization_member", "per_page": 100, "page": page, "sort": "updated"},
             timeout=_TIMEOUT,
         )
         r.raise_for_status()

@@ -65,8 +65,7 @@ class MonitorDialog(QDialog):
         # Download directory
         dir_row = QHBoxLayout()
         dir_row.setSpacing(8)
-        default_dir = str(Path.home() / "Downloads" / "github-artifacts")
-        self._dir_edit = QLineEdit(download_dir or default_dir)
+        self._dir_edit = QLineEdit(download_dir)
         self._dir_edit.setPlaceholderText("Select download directory…")
         dir_row.addWidget(self._dir_edit)
 

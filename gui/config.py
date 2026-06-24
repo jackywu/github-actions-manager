@@ -11,6 +11,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 
 _DEFAULTS: dict[str, Any] = {
     "github_token": "",
+    "workspace": str(Path.home() / "github_helper"),
     "theme": "light",
     "monitored_repos": {},
 }
@@ -48,6 +49,16 @@ class Config:
     @token.setter
     def token(self, value: str) -> None:
         self._data["github_token"] = value
+        self.save()
+
+    # ------------------------------------------------------------- Workspace ----
+    @property
+    def workspace(self) -> str:
+        return self._data.get("workspace", str(Path.home() / "github_helper"))
+
+    @workspace.setter
+    def workspace(self, value: str) -> None:
+        self._data["workspace"] = value
         self.save()
 
     # ------------------------------------------------------------- Theme ----

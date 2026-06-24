@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QFileDialog,
 )
 
 from .config import Config
@@ -33,7 +34,7 @@ class SettingsDialog(QDialog):
         self.setModal(True)
 
         self._build_ui()
-        self._load_existing_token()
+        self._load_existing_settings()
 
     # ------------------------------------------------------------------
     def _build_ui(self) -> None:
@@ -71,6 +72,31 @@ class SettingsDialog(QDialog):
         token_row.addWidget(self._toggle_btn)
 
         root.addLayout(token_row)
+
+        # --- Workspace input row ---
+        workspace_label = QLabel("Workspace Directory")
+        workspace_label.setObjectName("panel_title")
+        root.addWidget(workspace_label)
+
+        ws_hint = QLabel(
+            "Downloads will be organized by repository inside this directory."
+        )
+        ws_hint.setProperty("color", "sub")
+        root.addWidget(ws_hint)
+
+        ws_row = QHBoxLayout()
+        ws_row.setSpacing(8)
+
+        self._workspace_edit = QLineEdit()
+        self._workspace_edit.setPlaceholderText("Select workspace directory…")
+        ws_row.addWidget(self._workspace_edit)
+
+        self._ws_browse_btn = QPushButton("Browse…")
+        self._ws_browse_btn.setFixedWidth(80)
+        self._ws_browse_btn.clicked.connect(self._browse_workspace)
+        ws_row.addWidget(self._ws_browse_btn)
+
+        root.addLayout(ws_row)
 
         # --- Validate button + status label ---
         validate_row = QHBoxLayout()
@@ -119,9 +145,18 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
-    def _load_existing_token(self) -> None:
+    def _load_existing_settings(self) -> None:
         if self.config.token:
             self._token_edit.setText(self.config.token)
+        if self.config.workspace:
+            self._workspace_edit.setText(self.config.workspace)
+
+    def _browse_workspace(self) -> None:
+        directory = QFileDialog.getExistingDirectory(
+            self, "Select Workspace Directory", self._workspace_edit.text()
+        )
+        if directory:
+            self._workspace_edit.setText(directory)
 
     # ------------------------------------------------------------------
     def _toggle_visibility(self) -> None:
@@ -172,8 +207,13 @@ class SettingsDialog(QDialog):
 
     def _save_and_accept(self) -> None:
         token = self._token_edit.text().strip()
+        workspace = self._workspace_edit.text().strip()
         if not token:
             QMessageBox.warning(self, "Missing Token", "Please enter a GitHub token.")
             return
+        if not workspace:
+            QMessageBox.warning(self, "Missing Workspace", "Please select a workspace directory.")
+            return
         self.config.token = token
+        self.config.workspace = workspace
         self.accept()
